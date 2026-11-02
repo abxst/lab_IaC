@@ -27,7 +27,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      ca-certificates curl unzip git make jq openssh-client rsync less vim-tiny \
+      ca-certificates curl unzip git make jq openssh-client rsync less vim-tiny nano \
       bash-completion direnv xorriso sshpass sudo tzdata \
       python3 python3-venv \
       iputils-ping dnsutils netcat-openbsd \

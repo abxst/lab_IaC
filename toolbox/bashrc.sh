@@ -14,6 +14,9 @@ complete -C /usr/local/bin/packer packer
 alias k=kubectl
 complete -o default -F __start_kubectl k
 
+# Editor mặc định cho git commit, kubectl edit, ansible-vault edit...
+export EDITOR=nano VISUAL=nano
+
 # Tự nạp .envrc (token Proxmox, KUBECONFIG) khi cd vào repo
 eval "$(direnv hook bash)"
 
