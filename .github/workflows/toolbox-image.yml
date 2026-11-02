@@ -1,0 +1,92 @@
+# Build image toolbox (control node của lab) rồi đẩy lên GitHub Container Registry.
+# Host Dokploy chỉ cần: docker compose pull && docker compose up -d   (xem docs/00-setup.md, Phần C)
+#
+#   push lên main có đổi toolbox/**  → build, smoke test, push :latest và :sha-xxxxxxx
+#   pull request                      → chỉ build + smoke test, không push
+#   Actions → toolbox-image → Run workflow  → build lại bằng tay (ví dụ để lấy bản vá OS mới)
+
+name: toolbox-image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "toolbox/**"
+      - ".github/workflows/toolbox-image.yml"
+  pull_request:
+    paths:
+      - "toolbox/**"
+      - ".github/workflows/toolbox-image.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: toolbox-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      # Tên image trên GHCR phải viết thường; repo tên lab_IaC nên phải hạ chữ hoa xuống
+      - name: Đặt tên image
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}/toolbox" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Tag và label
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+            type=ref,event=pr
+
+      - name: Build (chưa push)
+        uses: docker/build-push-action@v7
+        with:
+          context: toolbox
+          load: true
+          tags: toolbox:test
+          cache-from: type=gha,scope=toolbox
+          cache-to: type=gha,mode=max,scope=toolbox
+
+      - name: Smoke test
+        run: |
+          docker run --rm toolbox:test bash -c '
+            set -e
+            id
+            terraform version
+            packer version
+            ansible --version | head -1
+            ansible-lint --version | head -1
+            kubectl version --client
+            helm version --short
+            python3 -c "import kubernetes; print(\"python kubernetes\", kubernetes.__version__)"
+          '
+
+      - name: Đăng nhập GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Lần build thứ hai lấy hết từ cache nên gần như tức thì; tách ra để chỉ push khi smoke test đã qua
+      - name: Push
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v7
+        with:
+          context: toolbox
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=toolbox

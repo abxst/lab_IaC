@@ -88,6 +88,7 @@ devopvips/
 ├── Makefile                      # make up / vms / k8s / addons / destroy
 ├── .envrc.example                # biến môi trường Proxmox (bản thật không commit)
 ├── toolbox/                      # container control node: Dockerfile + compose.yml
+├── .github/workflows/            # toolbox-image.yml: build + push image toolbox lên GHCR
 ├── docs/                         # lý thuyết + bài tập từng giai đoạn
 ├── labs/
 │   ├── terraform-basics/         # giai đoạn 1

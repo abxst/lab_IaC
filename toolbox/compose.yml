@@ -1,7 +1,9 @@
 # Chạy trên host Dokploy (super-nginx), trong thư mục toolbox/:
-#   cp .env.example .env    # chỉnh UID/GID/đường dẫn nếu cần
-#   docker compose up -d --build
+#   cp .env.example .env
+#   docker compose pull && docker compose up -d     # image do GitHub Actions build sẵn
 #   docker exec -it toolbox bash
+#
+# Build tại chỗ thay vì pull (ví dụ UID trên host khác 1000): docker compose up -d --build
 #
 # KHÔNG dùng "docker compose down -v" hay xoá thư mục TOOLBOX_HOME:
 # trong đó có terraform.tfstate, SSH key, kubeconfig.
@@ -10,12 +12,12 @@ name: devops-toolbox
 
 services:
   toolbox:
+    image: ${TOOLBOX_IMAGE:-ghcr.io/abxst/lab_iac/toolbox:latest}
     build:
       context: .
       args:
         UID: ${TOOLBOX_UID:-1000}
         GID: ${TOOLBOX_GID:-1000}
-    image: devops-toolbox:local
     container_name: toolbox
     # Dùng mạng của host: thấy thẳng 10.10.10.0/24, DNS qua pfSense (*.hainth.local).
     # Không publish port nào; container không mở dịch vụ nào ra ngoài.

@@ -11,7 +11,7 @@ Một container Ubuntu 24.04 có đủ công cụ, chạy trên host Dokploy (`s
 | kubectl | v1.36.6 (cluster lab chạy 1.36) |
 | Helm | v4.3.1 |
 
-Version được pin bằng `ARG` trong [Dockerfile](Dockerfile).
+Version được pin bằng `ARG` trong [Dockerfile](Dockerfile). Image do GitHub Actions ([toolbox-image.yml](../.github/workflows/toolbox-image.yml)) build mỗi khi `toolbox/` thay đổi, rồi đẩy lên `ghcr.io/abxst/lab_iac/toolbox` (tag `latest` và `sha-xxxxxxx`). Trên host chỉ cần `docker compose pull && docker compose up -d`.
 
 Cách cài, cách dùng hằng ngày và cách xử lý lỗi xem ở [docs/00-setup.md, Phần C](../docs/00-setup.md#phần-c-toolbox-container-trên-dokploy-control-node).
 

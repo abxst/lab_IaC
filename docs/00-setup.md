@@ -184,6 +184,12 @@ id                                  # ghi lại uid/gid, và xem user đã thu�
 docker version && docker compose version
 sudo mkdir -p /opt/devops-toolbox/home
 ```
+Nếu `docker version` báo `permission denied ... docker.sock`, user chưa thuộc nhóm `docker`. VS Code cũng cần quyền này để attach vào container:
+```bash
+sudo usermod -aG docker $USER
+exit        # đăng xuất rồi SSH vào lại, kiểm tra: id | grep docker
+```
+> Nhóm `docker` gần như tương đương quyền root trên host. Chấp nhận được với user vốn đã có sudo.
 Chọn UID cho user `devops` trong container:
 - Nếu user trên host **không phải root**: dùng đúng `id -u` / `id -g` của user đó, để file trong thư mục home sửa được từ cả host lẫn container.
 - Nếu bạn SSH bằng **root**: dùng `1000:1000`.
@@ -193,13 +199,31 @@ TB_UID=1000; TB_GID=1000            # hoặc $(id -u) / $(id -g), xem ở trên
 sudo chown -R $TB_UID:$TB_GID /opt/devops-toolbox/home
 
 # Clone repo vào đúng thư mục sẽ trở thành ~/devopvips trong toolbox
-sudo -u "#$TB_UID" git clone https://github.com/<you>/devopvips.git /opt/devops-toolbox/home/devopvips
+# (user có uid = TB_UID thì clone thẳng; nếu không thì thêm: sudo -u "#$TB_UID")
+git clone https://github.com/abxst/lab_IaC.git /opt/devops-toolbox/home/devopvips
 
 cd /opt/devops-toolbox/home/devopvips/toolbox
-cp .env.example .env               # sửa TOOLBOX_UID / TOOLBOX_GID = TB_UID / TB_GID
-docker compose up -d --build       # lần đầu mất vài phút
+cp .env.example .env               # uid khác 1000 thì sửa TOOLBOX_UID / TOOLBOX_GID
+docker compose pull                # tải image do GitHub Actions build sẵn
+docker compose up -d
 docker exec -it toolbox bash       # prompt hiện "(toolbox) devops:~$"
 ```
+
+**Image do GitHub Actions build.** Workflow [.github/workflows/toolbox-image.yml](../.github/workflows/toolbox-image.yml):
+- chạy mỗi khi push lên `main` có thay đổi trong `toolbox/`;
+- build image, chạy smoke test (gọi version của mọi công cụ);
+- đẩy lên `ghcr.io/abxst/lab_iac/toolbox` với 2 tag: `latest` và `sha-xxxxxxx`.
+
+Lần đầu tiên, vào tab **Actions** của repo, chọn *toolbox-image → Run workflow* để có image đầu tiên.
+
+> **Image trên GHCR của repo private mặc định cũng là private.** Có 2 cách để host pull được:
+> - **Đăng nhập GHCR trên host** (khuyến nghị): tạo PAT (classic) chỉ có quyền `read:packages`, rồi:
+>   ```bash
+>   echo '<PAT>' | docker login ghcr.io -u abxst --password-stdin
+>   ```
+> - **Đặt package thành public** (*GitHub → Your profile → Packages → toolbox → Package settings → Change visibility*). Image không chứa bí mật nào, nhưng sẽ lộ danh sách công cụ và version bạn dùng.
+>
+> Image được build với UID/GID `1000:1000`. Nếu user trên host có uid khác, hãy build tại chỗ bằng `docker compose up -d --build`, compose sẽ dùng UID trong `.env`.
 Trong toolbox, kiểm tra:
 ```bash
 terraform version; packer version; ansible --version | head -1; ansible-lint --version
@@ -230,7 +254,7 @@ cd ~/devopvips && git pull
 
 > - Chỉ sửa code ở **một phía**, tức là laptop chính. Nếu lỡ sửa trong toolbox, hãy `git stash` trước khi `pull`.
 > - **Không bao giờ** `git clean -fdx` trong `~/devopvips`: lệnh này xoá luôn các file bị ignore, tức là xoá state Terraform.
-> - Nếu `toolbox/Dockerfile` thay đổi sau khi pull, build lại trên **host**: `cd /opt/devops-toolbox/home/devopvips/toolbox && docker compose up -d --build`.
+> - Nếu `toolbox/` thay đổi: đợi workflow trên GitHub chạy xong (tab Actions), rồi trên **host** chạy `cd /opt/devops-toolbox/home/devopvips/toolbox && docker compose pull && docker compose up -d`. Container được tạo lại với image mới, còn dữ liệu trong `/home/devops` giữ nguyên.
 
 ### C4. SSH key cho lab
 Trong toolbox:
@@ -272,7 +296,9 @@ export PROXMOX_VE_INSECURE=true          # lab dùng cert tự ký
 > Dùng **nháy đơn** cho token vì chuỗi có ký tự `!`. Trong bash, `!` nằm trong nháy kép sẽ bị hiểu là history expansion.
 
 ### C6. Nâng cấp và backup toolbox
-- **Nâng version một công cụ:** sửa `ARG` trong Dockerfile (trên laptop chính, push) → `git pull` → build lại trên host bằng `docker compose up -d --build`. Dữ liệu trong `/home/devops` vẫn còn nguyên.
+- **Nâng version một công cụ:** sửa `ARG` trong Dockerfile trên laptop chính → push → GitHub Actions build và push image mới → trên host chạy `docker compose pull && docker compose up -d`. Dữ liệu trong `/home/devops` vẫn còn nguyên.
+- **Quay lại bản cũ khi bản mới lỗi:** đặt `TOOLBOX_IMAGE=ghcr.io/abxst/lab_iac/toolbox:sha-<commit cũ>` trong `.env`, rồi `docker compose up -d`.
+- **Lấy bản vá bảo mật của Ubuntu:** chạy workflow bằng tay (*Run workflow*) khoảng mỗi tháng một lần.
 - **Backup:** chỉ cần backup thư mục `/opt/devops-toolbox/home` trên host, vì trong đó có state Terraform. Ví dụ: `sudo tar czf ~/toolbox-home-$(date +%F).tgz -C /opt/devops-toolbox home`.
 - ⚠️ **Không** chạy `docker compose down -v`, và không xoá thư mục đó.
 
@@ -315,7 +341,8 @@ getent hosts k8s-api.hainth.local
 | Triệu chứng | Nguyên nhân / Cách xử lý |
 |---|---|
 | `Permission denied` khi ghi vào `/home/devops` | Thư mục `/opt/devops-toolbox/home` trên host chưa thuộc UID trong `.env`. Chạy lại `chown` ở bước C2 |
-| `docker compose up` báo lỗi khi tải tool | Lỗi mạng lúc build, hoặc checksum sai (file tải về bị hỏng). Chạy lại; nếu vẫn lỗi checksum thì kiểm tra version trong `ARG` |
+| `docker compose pull` báo `denied` hoặc `unauthorized` | Package trên GHCR là private mà host chưa `docker login ghcr.io` (xem bước C2), hoặc workflow chưa chạy lần nào nên chưa có image |
+| Workflow `toolbox-image` báo đỏ | Mở log trên tab Actions. Lỗi ở bước build: thường do mạng hoặc sai checksum, kiểm tra version trong `ARG`. Lỗi ở bước Smoke test: một công cụ không chạy được |
 | `git clone`/`git pull` hỏi mật khẩu hoặc báo `403` | Repo private. Dùng deploy key hoặc PAT (bước C1). Với HTTPS, PAT nhập vào chỗ password |
 | Toolbox không phân giải được `*.hainth.local` | DNS của host Dokploy không trỏ về `10.10.10.254`. Kiểm tra `resolvectl status` trên host |
 | VS Code không thấy container khi Attach | User SSH vào host chưa có quyền docker: `sudo usermod -aG docker <user>`, rồi đăng xuất và vào lại |
