@@ -1,0 +1,17 @@
+# cp .envrc.example .envrc && direnv allow
+# .envrc nằm trong .gitignore: KHÔNG commit file chứa token thật.
+
+# Terraform provider bpg/proxmox
+export PROXMOX_VE_ENDPOINT="https://10.10.10.1:8006/"
+export PROXMOX_VE_API_TOKEN='terraform@pve!automation=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+export PROXMOX_VE_INSECURE=true
+export PROXMOX_VE_SSH_USERNAME=root
+export PROXMOX_VE_SSH_PRIVATE_KEY="$(cat ~/.ssh/k8s_lab)"
+
+# Packer plugin proxmox (cùng token, tên biến khác)
+export PROXMOX_URL="https://10.10.10.1:8006/api2/json"
+export PROXMOX_USERNAME='terraform@pve!automation'
+export PROXMOX_TOKEN='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+
+# Kubeconfig của lab (có từ giai đoạn 4)
+export KUBECONFIG="$HOME/.kube/k8s-lab.conf"

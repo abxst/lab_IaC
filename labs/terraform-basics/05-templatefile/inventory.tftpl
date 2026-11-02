@@ -1,0 +1,22 @@
+# Sinh bởi Terraform (labs/terraform-basics/05-templatefile). Đừng sửa tay.
+
+[control_plane]
+%{ for name, n in nodes ~}
+%{ if n.role == "control_plane" ~}
+${name} ansible_host=${n.ip}
+%{ endif ~}
+%{ endfor ~}
+
+[workers]
+%{ for name, n in nodes ~}
+%{ if n.role == "worker" ~}
+${name} ansible_host=${n.ip}
+%{ endif ~}
+%{ endfor ~}
+
+[k8s_cluster:children]
+control_plane
+workers
+
+[k8s_cluster:vars]
+ansible_user=${ansible_user}

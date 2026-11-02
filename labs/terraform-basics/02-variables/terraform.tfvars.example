@@ -1,0 +1,4 @@
+# cp terraform.tfvars.example terraform.tfvars
+# (*.tfvars nằm trong .gitignore vì thường chứa giá trị riêng hoặc bí mật)
+env   = "prod"
+owner = "hainth"

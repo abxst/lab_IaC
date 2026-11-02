@@ -1,0 +1,27 @@
+# Chạy trên host Dokploy (super-nginx), trong thư mục toolbox/:
+#   cp .env.example .env    # chỉnh UID/GID/đường dẫn nếu cần
+#   docker compose up -d --build
+#   docker exec -it toolbox bash
+#
+# KHÔNG dùng "docker compose down -v" hay xoá thư mục TOOLBOX_HOME:
+# trong đó có terraform.tfstate, SSH key, kubeconfig.
+
+name: devops-toolbox
+
+services:
+  toolbox:
+    build:
+      context: .
+      args:
+        UID: ${TOOLBOX_UID:-1000}
+        GID: ${TOOLBOX_GID:-1000}
+    image: devops-toolbox:local
+    container_name: toolbox
+    # Dùng mạng của host: thấy thẳng 10.10.10.0/24, DNS qua pfSense (*.hainth.local).
+    # Không publish port nào; container không mở dịch vụ nào ra ngoài.
+    network_mode: host
+    init: true
+    restart: unless-stopped
+    volumes:
+      # Toàn bộ home: repo, state, ~/.ssh, ~/.kube, cache provider, VS Code server
+      - ${TOOLBOX_HOME:-/opt/devops-toolbox/home}:/home/devops

@@ -1,0 +1,28 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+*.tfplan
+tf.plan
+out/
+
+# Packer
+packer_cache/
+*.pkrvars.hcl
+!*.pkrvars.hcl.example
+
+# Ansible / K8s artefacts sinh ra lúc chạy
+ansible/inventory/hosts.ini
+*.retry
+kubeconfig
+admin.conf
+backups/
+
+# Secrets
+.envrc
+.env
+*.pem
+id_*
