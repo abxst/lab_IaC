@@ -9,7 +9,7 @@ Code sẽ nằm ở `ansible/playbooks/`.
 | `add-node.yml` | Thêm node vào cluster |
 | `remove-node.yml` | Đưa node ra khỏi cluster an toàn |
 | `upgrade.yml` | Nâng K8s lên 1 minor |
-| `backup-etcd.yml` | Snapshot etcd + PKI, kéo về WSL |
+| `backup-etcd.yml` | Snapshot etcd + PKI, kéo về toolbox |
 | `restore-etcd.yml` | Khôi phục etcd từ snapshot |
 | `reset.yml` | `kubeadm reset` toàn bộ để làm lại |
 
@@ -66,7 +66,7 @@ CP đầu tiên:       unhold → cài kubeadm mới → kubeadm upgrade plan �
                    → drain → nâng kubelet + kubectl → restart kubelet → uncordon
 CP còn lại (HA):   cài kubeadm mới → kubeadm upgrade node → drain → kubelet → uncordon
 Từng worker:       cài kubeadm mới → kubeadm upgrade node → drain → kubelet → uncordon
-Sau cùng:          hold lại gói · nâng KUBECTL_VERSION trong tools/install-tools.sh · kiểm tra Calico và các add-on còn tương thích
+Sau cùng:          hold lại gói · nâng KUBECTL_VERSION trong toolbox/Dockerfile · kiểm tra Calico và các add-on còn tương thích
 ```
 
 Khung play cho worker:
@@ -113,7 +113,7 @@ kubectl -n kube-system exec etcd-kubec1 -- etcdctl \
 ```
 Playbook `backup-etcd.yml` sẽ:
 1. chạy lệnh trên với tên file có timestamp;
-2. `fetch` file snapshot **và thư mục `/etc/kubernetes/pki/`** về `backups/<ngày>/` trong WSL (nhớ chép thêm một bản ra ngoài WSL). Không có CA cũ thì snapshot gần như vô dụng khi phải dựng lại control plane;
+2. `fetch` file snapshot **và thư mục `/etc/kubernetes/pki/`** về `backups/<ngày>/` trong toolbox (nằm trên volume nên được backup cùng thư mục home). Không có CA cũ thì snapshot gần như vô dụng khi phải dựng lại control plane;
 3. xoá các snapshot cũ trên node, chỉ giữ N bản gần nhất.
 
 Thư mục `backups/` đã nằm trong `.gitignore`, vì nó chứa private key của CA.
@@ -136,7 +136,7 @@ sudo kubeadm certs renew all          # renew thủ công, sau đó phải resta
 ```
 - `kubeadm upgrade apply` **tự động renew** cert. Cluster được nâng version đều đặn sẽ không gặp chuyện cert hết hạn.
 - Client cert của kubelet tự xoay vòng. Serving cert do kubelet-csr-approver lo (giai đoạn 5).
-- Sau khi renew, file `admin.conf` có cert mới, nên phải `fetch` lại về WSL.
+- Sau khi renew, file `admin.conf` có cert mới, nên phải `fetch` lại về toolbox.
 
 ## 6. Snapshot VM trên Proxmox: lưới an toàn của lab
 ```bash
@@ -156,7 +156,7 @@ Bài tập nhỏ: viết thành playbook `proxmox-snapshot.yml`, chạy trên ho
 2. Tạo PDB `minAvailable: 1` cho một deployment chỉ có 1 replica, rồi drain node đang chạy pod đó. Quan sát drain bị treo, sau đó xử lý.
 3. Nâng cluster lên 1 minor bằng `upgrade.yml`. Vừa nâng vừa chạy `curl` liên tục để kiểm chứng app không bị gián đoạn.
 4. **Diễn tập thảm hoạ:** backup etcd → `kubectl delete ns demo` → restore → namespace `demo` quay lại.
-5. Chạy `backup-etcd.yml` định kỳ bằng cron trong WSL (hoặc Task Scheduler của Windows gọi `wsl -e ...`), giữ 7 bản gần nhất.
+5. Chạy `backup-etcd.yml` định kỳ bằng cron trên host Dokploy gọi `docker exec toolbox ...`, giữ 7 bản gần nhất.
 6. `sudo kubeadm certs check-expiration` trước và sau khi upgrade. Cert nào đã được làm mới?
 
 ## Lỗi thường gặp

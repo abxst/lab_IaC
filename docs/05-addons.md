@@ -138,7 +138,7 @@ kubectl top nodes
 ```
 
 ## 6. Bài tập
-1. **LoadBalancer:** `kubectl create deploy web --image=nginx && kubectl expose deploy web --port 80 --type LoadBalancer`. Service nhận IP nào? `curl` thử từ WSL, rồi mở bằng trình duyệt trên Jump. ❓ Vì sao từ laptop chính (ngoài mạng lab) lại không vào được IP này? Muốn vào được thì cần thêm gì? (Gợi ý: Tailscale subnet router, hoặc NAT/port forward trên pfSense.)
+1. **LoadBalancer:** `kubectl create deploy web --image=nginx && kubectl expose deploy web --port 80 --type LoadBalancer`. Service nhận IP nào? `curl` thử từ toolbox, rồi mở bằng trình duyệt trên Jump. ❓ Vì sao từ laptop chính (ngoài mạng lab) lại không vào được IP này? Muốn vào được thì cần thêm gì? (Gợi ý: Tailscale subnet router, hoặc NAT/port forward trên pfSense.)
 2. **Ingress không cần DNS:** viết Ingress `whoami.10.10.10.80.nip.io` cho image `traefik/whoami` (dùng `kubernetes_deployment`, `kubernetes_service`, `kubernetes_ingress_v1` trong Terraform). Mở link này trên trình duyệt.
 3. **Gateway API:** bật Gateway provider trong values của Traefik, viết `Gateway` + `HTTPRoute` thay cho Ingress. So sánh hai cách.
 4. **Drift:** `helm upgrade` tay một release (đổi replicas), rồi `terraform plan`. Terraform có phát hiện được không?

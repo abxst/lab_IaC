@@ -15,12 +15,14 @@ make destroy   # xoá sạch, dựng lại bất cứ lúc nào
 ## Kiến trúc lab
 
 ```
-Laptop chính (bất kỳ đâu, nơi viết code) ──Tailscale──► RDP vào Jump (copy/paste repo)
-                                                          │
+Laptop chính (nơi viết code) ──git push──► GitHub (private)
+      │                                        │ git pull
+      └──Tailscale──► RDP vào Jump             │
+                        │ VS Code Remote-SSH   │
 LAN pfSense 10.10.10.0/24 (gateway, DHCP, DNS = pfSense 10.10.10.254)
- │
- ├─ Jump 10.10.10.202 (Windows)
- │    └─ WSL2 Ubuntu 24.04: ~/devopvips = CONTROL NODE   (tools/install-tools.sh)
+ │                      ▼                      ▼
+ ├─ super-nginx 10.10.10.201 (host Dokploy)
+ │    └─ container "toolbox" = CONTROL NODE   (toolbox/, docker compose)
  │         terraform · packer · ansible · kubectl · helm
  │           │  Proxmox API (token)          │ SSH
  │           ▼                               ▼
@@ -47,7 +49,7 @@ Terraform (helm provider) ──(kubeconfig)──► MetalLB, metrics-server, T
 
 | # | Giai đoạn | Học được gì | Tài liệu | Thời gian* |
 |---|-----------|-------------|----------|-----------|
-| 0 | Chuẩn bị môi trường | Proxmox, API token, WSL trên Jump + tools/install-tools.sh | [00-setup](docs/00-setup.md) | 1–2 ngày |
+| 0 | Chuẩn bị môi trường | Proxmox, API token, toolbox container trên Dokploy (control node) | [00-setup](docs/00-setup.md) | 1–2 ngày |
 | 1 | Terraform cơ bản | provider, resource, state, for_each, templatefile, module | [01-terraform-basics](docs/01-terraform-basics.md) | 2–3 ngày |
 | 2 | Ansible cơ bản | inventory, playbook, handler, template, role, idempotency | [02-ansible-basics](docs/02-ansible-basics.md) | 3–4 ngày |
 | 3 | Image + VM bằng code | Packer + Ubuntu autoinstall, Terraform `bpg/proxmox`, cloud-init | [03-vm-provisioning](docs/03-vm-provisioning.md) | 3–4 ngày |
@@ -68,7 +70,7 @@ Terraform (helm provider) ──(kubeconfig)──► MetalLB, metrics-server, T
 
 ## Checklist tiến độ
 
-- [ ] **0** Proxmox chạy, API token hoạt động, WSL trên Jump có đủ công cụ
+- [ ] **0** Proxmox chạy, API token hoạt động, toolbox có đủ công cụ
 - [ ] **1** Hoàn thành 6 bài Terraform cơ bản, tạo được 1 VM Proxmox bằng Terraform
 - [ ] **2** Viết được role nginx idempotent, `ansible-lint` sạch
 - [ ] **3** `packer build` ra template, `terraform apply` ra 3 VM, `ansible all -m ping` OK
@@ -85,7 +87,7 @@ devopvips/
 ├── README.md                     # file này
 ├── Makefile                      # make up / vms / k8s / addons / destroy
 ├── .envrc.example                # biến môi trường Proxmox (bản thật không commit)
-├── tools/install-tools.sh        # cài terraform, packer, ansible, kubectl, helm (pin version) vào WSL
+├── toolbox/                      # container control node: Dockerfile + compose.yml
 ├── docs/                         # lý thuyết + bài tập từng giai đoạn
 ├── labs/
 │   ├── terraform-basics/         # giai đoạn 1
@@ -120,7 +122,7 @@ devopvips/
 | MetalLB pool | `10.10.10.80–99` |
 | Pod CIDR / Service CIDR | `10.244.0.0/16` / `10.96.0.0/12` |
 | DNS cho node | `10.10.10.254` (pfSense, có Host Override `k8s-api.hainth.local`) |
-| Control node | WSL2 Ubuntu 24.04 trên Jump `10.10.10.202` |
+| Control node | container `toolbox` trên super-nginx (Dokploy) `10.10.10.201` |
 | Đã dùng (không đụng tới) | `.1` Proxmox · `.201` super-nginx (Dokploy) · `.202` jumper · `.254` pfSense |
 
 > Dải IP tĩnh ở trên **phải nằm ngoài dải DHCP** của pfSense LAN (*Services → DHCP Server → LAN*). Kiểm tra trước khi bắt đầu, xem [00-setup, Phần A](docs/00-setup.md#phần-a-kế-hoạch-mạng-trong-pfsense-đừng-bỏ-qua).

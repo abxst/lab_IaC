@@ -14,7 +14,7 @@ Lý thuyết và đề bài nằm ở [docs/01-terraform-basics.md](../../docs/0
 
 ## Quy trình cho mọi bài
 
-Chạy trong WSL trên Jump, thư mục `~/devopvips` (xem [docs/00-setup.md, Phần C](../../docs/00-setup.md)):
+Chạy trong toolbox, thư mục `~/devopvips` (xem [docs/00-setup.md, Phần C](../../docs/00-setup.md)):
 ```bash
 cd labs/terraform-basics/01-hello
 terraform init

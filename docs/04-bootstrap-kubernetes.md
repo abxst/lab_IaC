@@ -74,7 +74,7 @@ Kiểm tra trên node: `sudo crictl info | grep -i systemdcgroup`. Cần có fil
 ```yaml
 # group_vars/all.yml
 k8s_minor: "v1.36"         # repo pkgs.k8s.io tách theo minor
-k8s_version: "1.36.6"      # patch cụ thể (khớp kubectl trong tools/install-tools.sh), xem https://kubernetes.io/releases/
+k8s_version: "1.36.6"      # patch cụ thể (khớp kubectl trong toolbox/Dockerfile), xem https://kubernetes.io/releases/
 ```
 - Thêm repo `https://pkgs.k8s.io/core:/stable:/{{ k8s_minor }}/deb/` (repo chính thức, mỗi minor version là một repo riêng).
 - Cài **đúng version**: `kubeadm={{ k8s_version }}-*`, tương tự cho kubelet và kubectl.
@@ -116,7 +116,7 @@ serverTLSBootstrap: true               # kubelet xin serving cert hợp lệ (gi
 > Vì vậy **không dùng mặc định của Calico (`192.168.0.0/16`)**: dải đó bao trùm mạng nhà, khiến gói tin từ node đi tới router nhà bị hút vào mạng pod. `10.244.0.0/16` và `10.96.0.0/12` không trùng với mạng nào ở trên.
 
 > **`controlPlaneEndpoint` nên là tên DNS, không nên là IP**, và phải đặt ngay từ lần `init` đầu tiên. Lý do: tên này được ghi vào cert của API server và vào mọi kubeconfig. Sau `init` thì đổi rất khó.
-> - Lab dùng `control_plane_endpoint: k8s-api.hainth.local`, khai báo bằng **Host Override trên pfSense** (giai đoạn 0, Phần A). Node dùng DNS `10.10.10.254`, còn Jump và WSL cũng đi qua pfSense, nên không cần sửa `/etc/hosts` ở đâu cả.
+> - Lab dùng `control_plane_endpoint: k8s-api.hainth.local`, khai báo bằng **Host Override trên pfSense** (giai đoạn 0, Phần A). Node dùng DNS `10.10.10.254`, còn Jump và toolbox (host Dokploy) cũng đi qua pfSense, nên không cần sửa `/etc/hosts` ở đâu cả.
 > - Lên HA ở giai đoạn 7, chỉ cần sửa Host Override sang VIP `10.10.10.50`, không phải dựng lại cluster.
 
 ### Các task chính
@@ -130,18 +130,18 @@ serverTLSBootstrap: true               # kubelet xin serving cert hợp lệ (gi
   ansible.builtin.command: kubeadm init --config /etc/kubernetes/kubeadm-config.yaml
   when: not admin_conf.stat.exists
 
-- name: Kéo kubeconfig về WSL
+- name: Kéo kubeconfig về toolbox
   ansible.builtin.fetch:
     src: /etc/kubernetes/admin.conf
     dest: ~/.kube/k8s-lab.conf
     flat: true
 ```
-File `.envrc` (trong WSL) đã có sẵn `export KUBECONFIG=$HOME/.kube/k8s-lab.conf` (xem `.envrc.example`). Kubeconfig của cluster khác (nếu có) sẽ không bị ghi đè.
+File `.envrc` của toolbox đã có sẵn `export KUBECONFIG=$HOME/.kube/k8s-lab.conf` (xem `.envrc.example`). Kubeconfig của cluster khác (nếu có) sẽ không bị ghi đè.
 
 ## 6. CNI: role `cni` (Calico)
 
 - Cài **Tigera operator**, sau đó tạo resource `Installation` với `cidr` bằng `pod_cidr`.
-- Nên chạy từ WSL bằng `kubernetes.core.k8s` (`delegate_to: localhost`). Cách này cần thư viện Python `kubernetes` trong venv của Ansible. `tools/install-tools.sh` đã cài sẵn thư viện này vào `/opt/ansible`.
+- Nên chạy từ toolbox bằng `kubernetes.core.k8s` (`delegate_to: localhost`). Cách này cần thư viện Python `kubernetes` trong venv của Ansible. Toolbox đã cài sẵn thư viện này trong `/opt/ansible`.
 - Manifest của operator có CRD rất lớn, `apply` kiểu client-side sẽ lỗi `metadata.annotations: Too long`. Hãy dùng **server-side apply**:
   ```yaml
   - kubernetes.core.k8s:

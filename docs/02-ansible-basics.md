@@ -20,7 +20,7 @@ Hai công cụ có vùng chồng lấn (Ansible cũng tạo được VM, Terrafo
 ## 2. Khái niệm cốt lõi
 
 ### Kiến trúc agentless
-Control node (WSL) SSH vào managed node, đẩy module Python sang, chạy, lấy kết quả JSON về rồi xoá module. Managed node chỉ cần **SSH + Python 3**, không phải cài agent.
+Control node (toolbox) SSH vào managed node, đẩy module Python sang, chạy, lấy kết quả JSON về rồi xoá module. Managed node chỉ cần **SSH + Python 3**, không phải cài agent.
 
 ### Inventory
 ```ini
@@ -50,7 +50,7 @@ forks             = 10
 [ssh_connection]
 pipelining = True             # nhanh hơn rõ rệt
 ```
-> Ansible tìm `ansible.cfg` theo thứ tự: biến `ANSIBLE_CONFIG` → thư mục hiện tại → `~/.ansible.cfg` → `/etc/ansible/ansible.cfg`. Nó **bỏ qua** `ansible.cfg` nằm trong thư mục world-writable (quyền 777), ví dụ ổ Windows mount vào WSL. Đó là lý do repo phải được chép vào `~/devopvips` trong WSL (giai đoạn 0, bước C2).
+> Ansible tìm `ansible.cfg` theo thứ tự: biến `ANSIBLE_CONFIG` → thư mục hiện tại → `~/.ansible.cfg` → `/etc/ansible/ansible.cfg`. Nó **bỏ qua** `ansible.cfg` nằm trong thư mục world-writable (quyền 777), ví dụ ổ Windows mount vào WSL. Repo của lab nằm trong `/home/devops` của toolbox nên không gặp chuyện này.
 
 ### Lệnh ad-hoc: chạy nhanh một module
 ```bash

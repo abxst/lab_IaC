@@ -124,7 +124,7 @@ Bước 6:    kubec1 + kubec2 + kubec3             (9GB)
 1. Backup etcd và PKI, snapshot VM (giai đoạn 6).
 2. Gỡ taint và label trên kubec1 (mục 2) để kubec1 nhận được workload.
 3. `remove-node.yml` lần lượt `kubew1`, `kubew2`: pod dời hết sang kubec1. Nếu kubec1 thiếu RAM, hãy tạm scale down các app không quan trọng.
-4. Cài kube-vip trên kubec1. Cluster đã có sẵn nên dùng `admin.conf`, **không cần** `super-admin.conf`. Kiểm tra `ping 10.10.10.50`, rồi sửa Host Override `k8s-api.hainth.local` trên pfSense sang `.50`. Trên các node có thể cần xoá cache DNS (`resolvectl flush-caches`). Chạy `kubectl get nodes` từ WSL để xác nhận.
+4. Cài kube-vip trên kubec1. Cluster đã có sẵn nên dùng `admin.conf`, **không cần** `super-admin.conf`. Kiểm tra `ping 10.10.10.50`, rồi sửa Host Override `k8s-api.hainth.local` trên pfSense sang `.50`. Trên các node có thể cần xoá cache DNS (`resolvectl flush-caches`). Chạy `kubectl get nodes` từ toolbox để xác nhận.
 5. Terraform: xoá `kubew1`, `kubew2` khỏi tfvars, thêm `kubec2`, `kubec3`, rồi `apply` (plan đúng phải là: 2 to add, 2 to destroy).
 6. Chạy role chuẩn bị, rồi join kubec2 và **chờ etcd ổn định** trước khi join kubec3. Gỡ taint và label cho cả hai.
 7. Kiểm tra etcd:
@@ -137,7 +137,7 @@ Bước 6:    kubec1 + kubec2 + kubec3             (9GB)
 ---
 
 ## 4. Bài tập
-1. **Failover API:** chạy `watch -n1 kubectl get nodes` trong WSL. Trên Proxmox, `qm stop 151` (kubec1, đang giữ VIP). Đo xem bao nhiêu giây sau thì `kubectl` chạy lại được. Trên kubec2, `ip a show ens18` có thấy `.50` không?
+1. **Failover API:** chạy `watch -n1 kubectl get nodes` trong toolbox. Trên Proxmox, `qm stop 151` (kubec1, đang giữ VIP). Đo xem bao nhiêu giây sau thì `kubectl` chạy lại được. Trên kubec2, `ip a show ens18` có thấy `.50` không?
 2. **Failover workload:** deploy nginx 3 replica kèm `topologySpreadConstraints` để mỗi node có 1 pod, và Service LoadBalancer. `curl` liên tục trong lúc tắt 1 node. Có request nào lỗi không? Pod của node chết được dựng lại sau bao lâu? (Gợi ý: tìm hiểu toleration mặc định `node.kubernetes.io/unreachable` có thời gian 300s.)
 3. **Mất quorum:** tắt thêm kubec2 (chỉ còn kubec3). `kubectl get nodes` ra sao? Pod nginx còn trả lời không? Vì sao vẫn còn hoặc không còn? Sau đó bật lại cả hai.
 4. **Leader election:** `kubectl -n kube-system get lease`. Ai đang là leader của `kube-scheduler`, `kube-controller-manager`, `plndr-cp-lock` (kube-vip)? Tắt node leader và quan sát lease chuyển sang node khác.

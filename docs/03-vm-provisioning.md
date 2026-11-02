@@ -22,12 +22,12 @@ Code sẽ nằm ở `infra/packer/ubuntu-base/` và `infra/terraform/vms/`.
 ### A2. Đưa autoinstall vào VM: chọn đĩa `cidata`, không dùng HTTP
 Có 2 cách để installer đọc được `user-data`:
 
-| Cách | Cơ chế | Với WSL |
+| Cách | Cơ chế | Với toolbox |
 |---|---|---|
 | HTTP (`ds=nocloud-net;s=http://...`) | Packer mở HTTP server, VM tải file về qua mạng | VM phải gọi **ngược vào control node**: phải mở port trên host, và Packer dễ đoán sai IP |
 | **CD `cidata`** (`ds=nocloud`) | Packer đóng `user-data` + `meta-data` thành ISO có label `cidata`, gắn vào VM như ổ CD | Không cần kết nối ngược về control node ✅ |
 
-Lab này dùng **CD `cidata`**. Cách này cần `xorriso`, đã được cài bởi `tools/install-tools.sh`.
+Lab này dùng **CD `cidata`**. Cách này cần `xorriso`, đã có sẵn trong toolbox.
 
 ### A3. `http/user-data`: những phần quan trọng
 Nếu bạn đã có `user-data` từ autoinstall generator, hãy dùng lại và đối chiếu với các điểm dưới đây:
@@ -330,7 +330,7 @@ Bài tập: dựng `kubew2` từ cloud image, giữ 2 node còn lại từ templ
 | Packer kẹt ở `Waiting for SSH` quá lâu | Mở console VM 9000. Nếu installer đang hỏi gì đó: `user-data` sai cú pháp hoặc thiếu `autoinstall` trong cmdline. Nếu đã cài xong mà vẫn không SSH được: sai key hoặc VM chưa nhận DHCP |
 | Installer bỏ qua `user-data` | File phải bắt đầu đúng bằng `#cloud-config`, ISO phải có label `cidata`, phải có cả file `meta-data` |
 | Clone không nhận IP tĩnh | Bước A5 chưa chạy hoặc lỗi. Kiểm tra `/etc/cloud/cloud.cfg.d/99-installer.cfg` có còn không, và `cloud-init status --long` |
-| `403` khi clone hoặc tạo disk | Role thiếu privilege (thường là `Datastore.AllocateSpace` hoặc `VM.Clone`), xem giai đoạn 0, bước B7 |
+| `403` khi clone hoặc tạo disk | Role thiếu privilege (thường là `Datastore.AllocateSpace` hoặc `VM.Clone`), xem giai đoạn 0, bước B6 |
 | `terraform destroy` treo | Guest agent chưa chạy. Đặt `stop_on_destroy = true`, hoặc stop VM trên giao diện |
 | `ansible ping` báo `Host key verification failed` | Xoá `~/.ssh/known_hosts_lab` |
 
